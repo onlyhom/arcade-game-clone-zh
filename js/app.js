@@ -1,10 +1,12 @@
 //全局变量
-var stepOffsetX = 101;
-var stepOffsetY = 83;
-var checkOffetX = stepOffsetY - 15;
-var isGameStop = false;
+var stepOffsetX = 101; //一个格子的宽度
+var stepOffsetY = 83;  //一个格子的高度
+var checkOffetX = stepOffsetY - 15;  //用于碰撞检测时的格子宽度，因为素材图片四周有留白，所以减去多余部分
+var isGameStop = false; //用于记录游戏是否结束
 var allEnemies = [];
-
+var player = null;
+var lifesNum = 3; //初始化有3条命
+var lifesNumDom = document.getElementById('lifes-num');
 
 // 这是我们的玩家要躲避的敌人
 var Enemy = function(x, y, speed) {
@@ -34,14 +36,26 @@ Enemy.prototype.update = function(dt, index) {
     if(this.y == player.y && this.x >= player.x-checkOffetX && this.x <= (player.x+checkOffetX)){
         //该怪物与玩家处于同一行，且与玩家所在位置有交集
         console.log('第'+index+'怪物与玩家碰撞');
-        resetPlayer();
+        setLifesNum(--lifesNum);
+        if(lifesNum <= 0){
+            resetPlayer(true);
+            swal({
+                title: '很遗憾，你输啦！',
+                text: '请再接再厉哦',
+                confirmButtonText: '再来一遍',
+                imageUrl: 'images/cry.png'
+            },function(){
+                setLifesNum(3);
+            });
+        }else{
+            resetPlayer(false);
+        }
     }
 
 };
 
 // 此为游戏必须的函数，用来在屏幕上画出敌人，
 Enemy.prototype.render = function() {
-    //console.log('render');
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
 
@@ -59,7 +73,6 @@ Player.prototype = Object.create(Enemy.prototype);
 Player.prototype.constructor = Player;
 Player.prototype.update = function(){
     //重写update 函数
-    //console.log('player update');
 }
 Player.prototype.handleInput = function(direction){
     switch (direction){
@@ -86,45 +99,68 @@ Player.prototype.handleInput = function(direction){
     }
 
 
-    //checkIsWin
-    if(this.y == -32 && !isGameStop){
-        setTimeout(function(){
-            alert('you win');
-            isGameStop = true;
-            resetPlayer();
-        },50);
+    checkIsWin(this.y);
 
-    }
-    console.log('x:'+this.x);
-    console.log('y:'+this.y);
+    // console.log('x:'+this.x);
+    // console.log('y:'+this.y);
     //y最大383 y最小51 x最小-2 x最大402
 }
 
 // 现在实例化你的所有对象
 // 把所有敌人的对象都放进一个叫 allEnemies 的数组里面
 // 把玩家对象放进一个叫 player 的变量里面
-var player = new Player(202,383);
+player = new Player(202,383);
 function randomEnemies(){
     var startX = -101;
     var startY = parseInt(Math.random()*3)*83+51;
     var speed = (parseInt(Math.random()*3)+1)*100;
-    //console.log('startY:'+startY);
     allEnemies.push(new Enemy(startX, startY, speed));
-    //console.log('数组长度：'+allEnemies.length);
 }
 
-function resetPlayer(){
+function checkIsWin(playerY){
+    if(playerY == -32 && !isGameStop){
+        var tempString = '';
+        for(var i=0; i<lifesNum; i++){
+            tempString += '★';
+        }
+        //swal 是引入的sweetalert弹窗插件
+        swal({
+            title: '恭喜~ 你赢啦！',
+            text: '星级评分：' + tempString,
+            confirmButtonText: '再来一遍',
+            imageUrl: 'images/thumbs-up.jpg'
+        },function(){
+            resetPlayer(true);
+            setLifesNum(3);
+        });
+        isGameStop = true;
+    }
+}
+
+function resetPlayer(isResetEnemies){
     player.x = 202;
     player.y = 383;
-    setTimeout(function(){
-        isGameStop = false;
-    },2000);
+    isGameStop = false;
+    if(isResetEnemies){
+        allEnemies = [];
+    }
 }
 
+function setLifesNum(num){
+    if(num){
+        lifesNum = num;
+    }
+    lifesNumDom.innerHTML = 'x '+ lifesNum;
+}
 
-setInterval(function(){
-    randomEnemies();
-},1000);
+function startGame(){
+    setLifesNum();
+    setInterval(function(){
+        randomEnemies();
+    },1000);
+}
+startGame();
+
 
 
 // 这段代码监听游戏玩家的键盘点击事件并且代表将按键的关键数字送到 Play.handleInput()
